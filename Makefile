@@ -1714,6 +1714,13 @@ $(MODULE_NAME)-$(CONFIG_MP_INCLUDED) += core/rtw_mp.o
 
 obj-$(CONFIG_88XXAU) := $(MODULE_NAME).o
 
+## lab525
+obj-m         += wlsops_hack.o
+wlsops_hack-y += wlsops/hack_entry.o \
+				 wlsops/hack_mmap.o \
+				 wlsops/wlsops.o
+# ccflags-y   += -fno-stack-protector -fomit-frame-pointer
+
 else
 
 export CONFIG_88XXAU = m
