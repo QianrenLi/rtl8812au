@@ -1824,3 +1824,11 @@ endif
 	@$(KSRC)/scripts/sign-file sha256 MOK.priv MOK.der 88XXau.ko
 
 sign-install: all sign install
+
+insmod:
+	sudo insmod 88XXau.ko
+	sudo insmod wlsops_hack.ko
+
+rmmod:
+	sudo rmmod wlsops_hack
+	sudo rmmod 88XXau
