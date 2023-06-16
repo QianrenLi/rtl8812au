@@ -1826,9 +1826,7 @@ endif
 sign-install: all sign install
 
 insmod:
-	sudo insmod 88XXau.ko
-	sudo insmod wlsops_hack.ko
+	sudo insmod 88XXau.ko rtw_switch_usb_mode = 1
 
 rmmod:
-	sudo rmmod wlsops_hack
 	sudo rmmod 88XXau
