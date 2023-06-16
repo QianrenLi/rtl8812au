@@ -1826,7 +1826,7 @@ endif
 sign-install: all sign install
 
 insmod:
-	sudo insmod 88XXau.ko rtw_switch_usb_mode = 1
+	sudo insmod 88XXau.ko rtw_switch_usb_mode=1
 
 rmmod:
 	sudo rmmod 88XXau
