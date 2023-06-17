@@ -94,7 +94,7 @@ int wls_conf_tx(struct tx_param param)
         AIFS = param.aifs * pmlmeinfo->slotTime + aSifsTime;
         TXOP = param.txop;
         printh("CW-min %d, CW-max %d,AIFS (ms) %d,  TXOP %d\n", CWMIN,CWMAX,AIFS,TXOP);
-        acParm = AIFS | (CWMAX << 4) | (CWMIN << 10) | (TXOP << 16);
+        acParm = AIFS | (CWMIN << 8) | (CWMAX << 12) | (TXOP << 16);
         printh("AC_param_value %d\n", acParm);
         switch (param.ac)
         {
