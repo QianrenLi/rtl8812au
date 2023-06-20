@@ -13,9 +13,6 @@
 static struct task_struct *kThread;
 static struct tx_param kParam;
 
-static char *if_name = "default";
-module_param(if_name, charp, S_IRUGO | S_IWUSR);
-
 // static char *module_name = "wlsops_hack";
 // module_param(module_name, charp, S_IRUGO | S_IWUSR);
 
@@ -37,7 +34,7 @@ int read_loop(void *data)
 
 static int __init wlsops_init(void)
 {
-    if ( (wls_hack_init(if_name)<0) || (hack_mmap_init()<0) )
+    if ( (wls_hack_init()<0) || (hack_mmap_init()<0) )
     {
         printh("HACK_ENTRY failed.\n");
         return -1;

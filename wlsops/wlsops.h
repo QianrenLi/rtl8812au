@@ -26,7 +26,9 @@ struct __attribute__((__packed__)) tx_param
     uint8_t if_ind;
 };
 
-int wls_hack_init(char * ifname);
+int wls_hack_init(void);
 int wls_conf_tx(struct tx_param);
+int intel_conf_tx(struct tx_param param);
+int realtek_conf_tx(struct tx_param param);
 
 #endif
