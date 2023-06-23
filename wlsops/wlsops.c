@@ -1,6 +1,7 @@
 #include "wlsops.h"
 #include "WLSINC.h"
 #include <linux/string.h>
+#include <net/net_namespace.h>
 
 _adapter *padapter = NULL;
 struct ieee80211_local *wls_local = NULL;
@@ -15,36 +16,41 @@ const char* substring = "wlx";
 int wls_hack_init(void)
 {
     struct net_device *dev;
+    struct net * net;
     struct rtw_netdev_priv_indicator *ptr;
     int counter = 1;
-    for_each_netdev(&init_net, dev)
-    {
-        if (strstr(dev->name, substring) != NULL)
+    for_each_net(net){
+        printh("Net index: %d \n", net->ifindex);
+        for_each_netdev(net, dev)
         {
-            ptr = ((struct rtw_netdev_priv_indicator *)netdev_priv(dev));
-            printh( "private address: %p, %d\n", ptr->priv, ptr->sizeof_priv );
-            padapter = (_adapter *)rtw_netdev_priv(dev);
-            if (padapter) {
-                printh("adapter: %p\n", padapter);
-                wls_adapter[counter] = (struct uint32_t *)padapter;
-                counter += 1;
-                printh("find wireless realtek device: %s\n", dev->name);
+            printh("find device: %s \n", dev->name);
+            if (strstr(dev->name, substring) != NULL)
+            {
+                ptr = ((struct rtw_netdev_priv_indicator *)netdev_priv(dev));
+                printh( "private address: %p, %d\n", ptr->priv, ptr->sizeof_priv );
+                padapter = (_adapter *)rtw_netdev_priv(dev);
+                if (padapter) {
+                    printh("adapter: %p\n", padapter);
+                    wls_adapter[counter] = (struct uint32_t *)padapter;
+                    counter += 1;
+                    printh("find wireless realtek device: %s\n", dev->name);
+                }
             }
-        }
-        if( dev->ieee80211_ptr ) // is a 802.11 device
-        {
-            t_wls_vif = wdev_to_ieee80211_vif(dev->ieee80211_ptr);
-            if (t_wls_vif) {
-                wls_local = (struct ieee80211_local *) wdev_priv(dev->ieee80211_ptr);
-                wls_adapter[0] = (struct uint32_t *)wls_local;
-                wls_hw = &wls_local->hw;
-                wls_vif = t_wls_vif;
-                printh("find 802.11 device: %s\n", dev->name);
-                printh("wls_vif: %p, wls_local: %p, wls_hw:%p\n", t_wls_vif, wls_local, wls_hw);
-                // break;
+            if( dev->ieee80211_ptr ) // is a 802.11 device
+            {
+                t_wls_vif = wdev_to_ieee80211_vif(dev->ieee80211_ptr);
+                if (t_wls_vif) {
+                    wls_local = (struct ieee80211_local *) wdev_priv(dev->ieee80211_ptr);
+                    wls_adapter[0] = (struct uint32_t *)wls_local;
+                    wls_hw = &wls_local->hw;
+                    wls_vif = t_wls_vif;
+                    printh("find 802.11 device: %s\n", dev->name);
+                    printh("wls_vif: %p, wls_local: %p, wls_hw:%p\n", t_wls_vif, wls_local, wls_hw);
+                    // break;
+                }
             }
+            if (counter == 4) break;
         }
-        if (counter == 4) break;
     }
 
     if (!wls_local)
