@@ -10,7 +10,13 @@ struct ieee80211_vif *t_wls_vif = NULL;
 struct ieee80211_hw *wls_hw = NULL;
 
 // create a pointer array
-struct uint32_t *wls_adapter[4] = {NULL, NULL, NULL, NULL};
+static int max_adapters = 4;
+module_param(max_adapters, int, 0644);
+MODULE_PARM_DESC(max_adapters, "Maximum number of adapters");
+
+struct uint32_t **wls_adapter = NULL;
+uint8_t *adapter_type = NULL;
+
 const char* substring = "wlx";
 
 int wls_hack_init(void)
@@ -18,22 +24,42 @@ int wls_hack_init(void)
     struct net_device *dev;
     struct net * net;
     struct rtw_netdev_priv_indicator *ptr;
-    int counter = 1;
+    int counter = 0;
+
+    wls_adapter = kmalloc_array(max_adapters, sizeof(struct uint32_t *), GFP_KERNEL);
+    if (!wls_adapter) {
+        printh("Failed to allocate memory for wls_adapter\n");
+        return -ENOMEM;
+    }
+
+    uint8_t i;
+    for (i = 0; i < max_adapters; i++) {
+        wls_adapter[i] = NULL;
+    }
+
+
+    // Create u8 array to indicate the type of adapter, 0 not found, 1 intel, 2 realtek
+    adapter_type = kmalloc_array(max_adapters, sizeof(uint8_t), GFP_KERNEL);
+    if (!adapter_type) {
+        printh("Failed to allocate memory for adapter_type\n");
+        kfree(wls_adapter);
+        return -ENOMEM;
+    }
+
     for_each_net(net){
-        printh("Net index: %d \n", net->ifindex);
         for_each_netdev(net, dev)
         {
-            printh("find device: %s \n", dev->name);
             if (strstr(dev->name, substring) != NULL)
             {
                 ptr = ((struct rtw_netdev_priv_indicator *)netdev_priv(dev));
-                printh( "private address: %p, %d\n", ptr->priv, ptr->sizeof_priv );
+                // printh( "private address: %p, %d\n", ptr->priv, ptr->sizeof_priv );
                 padapter = (_adapter *)rtw_netdev_priv(dev);
                 if (padapter) {
-                    printh("adapter: %p\n", padapter);
+                    // printh("adapter: %p\n", padapter);
                     wls_adapter[counter] = (struct uint32_t *)padapter;
+                    adapter_type[counter] = 2;
+                    printh("find wireless realtek device: %s, with index %d\n", dev->name, counter);
                     counter += 1;
-                    printh("find wireless realtek device: %s\n", dev->name);
                 }
             }
             if( dev->ieee80211_ptr ) // is a 802.11 device
@@ -41,36 +67,38 @@ int wls_hack_init(void)
                 t_wls_vif = wdev_to_ieee80211_vif(dev->ieee80211_ptr);
                 if (t_wls_vif) {
                     wls_local = (struct ieee80211_local *) wdev_priv(dev->ieee80211_ptr);
-                    wls_adapter[0] = (struct uint32_t *)wls_local;
+                    wls_adapter[counter] = (struct uint32_t *)wls_local;
+                    adapter_type[counter] = 1;
                     wls_hw = &wls_local->hw;
                     wls_vif = t_wls_vif;
-                    printh("find 802.11 device: %s\n", dev->name);
-                    printh("wls_vif: %p, wls_local: %p, wls_hw:%p\n", t_wls_vif, wls_local, wls_hw);
-                    // break;
+                    printh("find 802.11 device: %s, with index %d\n", dev->name, counter);
+                    counter += 1;
                 }
             }
-            if (counter == 4) break;
+            if (counter == max_adapters) break;
         }
     }
 
-    if (!wls_local)
-    {
-        printh("No 802.11 device found.\n");
-        return -1;
-    }
-
-    
+    printh("Complete init.\n");
     return 0;
 }
 
 int wls_conf_tx(struct tx_param param)
 {
     if (wls_adapter[param.if_ind]){
-        if (param.if_ind == 0){    // default entry 
+        if (param.if_ind >= max_adapters){
+            printh("Invalid adapter index\n");
+            return -1;
+        }
+        else if (adapter_type[param.if_ind] == 1){
             return intel_conf_tx(param);
         }
-        else{
+        else if (adapter_type[param.if_ind] == 2){
             return realtek_conf_tx(param);
+        }
+        else if (adapter_type[param.if_ind] == 0){
+            printh("Adapter with ind %d not found\n", param.if_ind);
+            return -1;
         }
     }
 
@@ -118,9 +146,9 @@ int realtek_conf_tx(struct tx_param param){
     CWMAX = (uint8_t)param.cw_max ;
     AIFS = param.aifs * pmlmeinfo->slotTime + aSifsTime;
     TXOP = param.txop;
-    printh("CW-min %d, CW-max %d,AIFS (ms) %d,  TXOP %d, Adapter: %p\n", CWMIN,CWMAX,AIFS,TXOP,_padapter);
+    printh("CW-min %d, CW-max %d, AIFS (ms) %d,  TXOP %d, Adapter: %p\n", CWMIN,CWMAX,AIFS,TXOP,_padapter);
     acParm = AIFS | (CWMIN << 8) | (CWMAX << 12) | (TXOP << 16);
-    printh("AC_param_value %d\n", acParm);
+    // printh("AC_param_value %d\n", acParm);
 
     switch (param.ac)
     {
